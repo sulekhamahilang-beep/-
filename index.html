@@ -365,8 +365,8 @@ currentTab=tab;
 document.getElementById(id).classList.toggle("hidden",id!==tab);
 });
 ["records","farmers","machineReport","monthly"].forEach(id=>{
-document.getElementById("tab"+id.charAt(0).toUpperCase()+id.slice(1))
-.classList.toggle("active",id===tab);
+const tabButtons={records:"tabRecords",farmers:"tabFarmers",machineReport:"tabMachines",monthly:"tabMonthly"};
+document.getElementById(tabButtons[id]).classList.toggle("active",id===tab);
 });
 
 if(tab==="records")showRecords();
@@ -673,13 +673,8 @@ a.click();
 URL.revokeObjectURL(url);
 }
 
-function restoreBackup(e){
-let file=e.target.files[0];
-if(!file)return;
-
-let reader=new FileReader();
-reader.onload=()=>{
+function backup(){
 try{
-let data=JSON.parse(reader.result);
-if(!Array.isArray(data))throw Error();
-if(!confirm(
+const data=JSON.stringify(records,null,2);
+const blob=new Blob([data],{type:"application/json"});
+const url=UR
