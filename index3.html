@@ -1,0 +1,499 @@
+
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>महिलांग कृषि फार्म V3</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f1f5ef;font-family:Arial;color:#222}
+header{background:#168b27;color:white;text-align:center;padding:20px}
+header h2{margin:0}
+header p{font-size:12px}
+main{max-width:650px;margin:auto;padding:12px}
+.panel{background:white;padding:14px;border-radius:12px;margin:12px 0;box-shadow:0 2px 7px #0001}
+h3{margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.machine{background:white;border:1px solid #ddd;border-radius:10px;padding:14px 5px;text-align:center;font-weight:bold}
+.machine span{display:block;font-size:27px;margin-bottom:7px}
+input,select{width:100%;padding:12px;border:1px solid #ccc;border-radius:7px;margin:5px 0 12px;font-size:15px}
+label{font-size:13px;font-weight:bold}
+button{background:#168b27;color:white;border:0;border-radius:7px;padding:11px;margin:3px;font-weight:bold}
+.full{width:100%}
+.red{background:#c62828}
+.blue{background:#2874b9}
+.gray{background:#555}
+.hidden{display:none}
+.summary{background:#168b27;color:white;padding:14px;border-radius:10px;margin-bottom:10px}
+.summary h2{margin:5px 0 12px}
+.record{background:white;border:1px solid #ddd;border-left:4px solid #168b27;border-radius:9px;padding:12px;margin:9px 0}
+.record div{margin:5px 0}
+.small{font-size:12px;color:#666}
+.result{background:#e8f6e8;padding:12px;border-radius:9px;margin:10px 0}
+.money{font-size:22px;color:#168b27;font-weight:bold}
+.tabs{display:flex;gap:5px;flex-wrap:wrap}
+footer{text-align:center;padding:20px;color:#777;font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+<h2>🌾 महिलांग कृषि फार्म</h2>
+<p>कृषि यंत्र हिसाब-किताब केंद्र | Version 3.0</p>
+</header>
+
+<main>
+
+<div class="panel">
+<h3>🚜 कृषि यंत्र चुनें</h3>
+<div class="grid" id="machines"></div>
+</div>
+
+<div class="panel hidden" id="calculator">
+<h3 id="machineTitle"></h3>
+
+<label>किसान का नाम</label>
+<input id="farmer" placeholder="किसान का नाम">
+
+<label>गांव / खेत</label>
+<input id="field" placeholder="गांव या खेत">
+
+<label>रेट (₹ प्रति यूनिट)</label>
+<input type="number" id="rate" min="0">
+
+<div id="quantityFields"></div>
+
+<label>डीजल खर्च (₹)</label>
+<input type="number" id="diesel" value="0" min="0">
+
+<label>मजदूरी खर्च (₹)</label>
+<input type="number" id="labour" value="0" min="0">
+
+<label>अन्य खर्च (₹)</label>
+<input type="number" id="other" value="0" min="0">
+
+<label>किसान से प्राप्त भुगतान (₹)</label>
+<input type="number" id="paid" value="0" min="0">
+
+<label>काम की तारीख</label>
+<input type="date" id="workDate">
+
+<button class="full" onclick="calculate()">हिसाब निकालें</button>
+
+<div class="result hidden" id="result">
+<p>कुल काम की रकम</p>
+<div class="money" id="gross"></div>
+<p>कुल खर्च: <b id="expense"></b></p>
+<p>शुद्ध बचत: <b id="profit"></b></p>
+<p>जमा रकम: <b id="paidShow"></b></p>
+<p>बाकी रकम: <b id="due"></b></p>
+<button class="full" onclick="saveRecord()">💾 हिसाब सेव करें</button>
+</div>
+</div>
+
+<div class="panel" id="book">
+<h3>📒 मेरी सेव की हुई बही</h3>
+
+<div class="summary">
+कुल हिसाब
+<h2 id="count">0</h2>
+कुल कमाई
+<h2 id="income">₹0</h2>
+कुल खर्च
+<h2 id="expenses">₹0</h2>
+कुल शुद्ध बचत
+<h2 id="saving">₹0</h2>
+कुल बकाया
+<h2 id="pending">₹0</h2>
+</div>
+
+<h3>🔎 हिसाब खोजें</h3>
+<input id="search" placeholder="किसान या मशीन का नाम" oninput="showHistory()">
+
+<label>तारीख से</label>
+<input type="date" id="fromDate" onchange="showHistory()">
+
+<label>तारीख तक</label>
+<input type="date" id="toDate" onchange="showHistory()">
+
+<div class="tabs">
+<button onclick="showHistory()">सभी हिसाब</button>
+<button class="blue" onclick="showDue()">बकाया हिसाब</button>
+<button class="gray" onclick="clearFilters()">फिल्टर हटाएँ</button>
+</div>
+
+<div id="history"></div>
+</div>
+
+<div class="panel">
+<h3>📊 कृषि यंत्र के अनुसार कमाई</h3>
+<div id="machineReport"></div>
+</div>
+
+<div class="panel">
+<h3>💾 डेटा सुरक्षा</h3>
+<button onclick="backup()">बही बैकअप डाउनलोड</button>
+<button class="blue" onclick="document.getElementById('restore').click()">बैकअप वापस लाएँ</button>
+<input type="file" id="restore" accept=".json" class="hidden" onchange="restoreBackup(event)">
+</div>
+
+<footer>© महिलांग कृषि फार्म | Version 3.0</footer>
+</main>
+
+<script>
+const KEY="mahilaKhetiBook";
+
+const tools=[
+{name:"ट्रैक्टर घंटा",icon:"🚜",unit:"घंटा",mode:"time"},
+{name:"ट्रैक्टर एकड़",icon:"🚜",unit:"एकड़",mode:"area"},
+{name:"ट्रॉली",icon:"🛻",unit:"चक्कर",mode:"trip"},
+{name:"थ्रेशर",icon:"🌾",unit:"घंटा",mode:"time"},
+{name:"हार्वेस्टर",icon:"🚜",unit:"एकड़",mode:"area"},
+{name:"रोटावेटर",icon:"⚙️",unit:"एकड़",mode:"area"},
+{name:"कल्टीवेटर",icon:"⚙️",unit:"एकड़",mode:"area"},
+{name:"सीड ड्रिल",icon:"🌱",unit:"एकड़",mode:"area"},
+{name:"रीपर",icon:"🌾",unit:"एकड़",mode:"area"},
+{name:"धान रोपाई मशीन",icon:"🌱",unit:"एकड़",mode:"area"},
+{name:"स्प्रे मशीन",icon:"💧",unit:"एकड़",mode:"area"},
+{name:"JCB कृषि कार्य",icon:"🚜",unit:"घंटा",mode:"time"}
+];
+
+let records=JSON.parse(localStorage.getItem(KEY)||"[]");
+let selected=null;
+let last=null;
+let editId=null;
+let dueOnly=false;
+
+function saveData(){
+localStorage.setItem(KEY,JSON.stringify(records));
+}
+function money(n){
+return "₹"+Number(n||0).toFixed(2);
+}
+function getDue(r){
+return Math.max(0,Number(r.gross??r.total??0)-Number(r.paid||0));
+}
+function setup(){
+tools.forEach((t,i)=>{
+let d=document.createElement("div");
+d.className="machine";
+d.innerHTML="<span>"+t.icon+"</span>"+t.name;
+d.onclick=()=>openCalc(i);
+document.getElementById("machines").appendChild(d);
+});
+}
+function openCalc(i){
+selected=tools[i];
+editId=null;
+last=null;
+document.getElementById("calculator").classList.remove("hidden");
+document.getElementById("machineTitle").innerText=selected.name;
+
+let q=selected.mode==="time"
+?'<label>घंटे</label><input type="number" id="hours" min="0"><label>मिनट</label><input type="number" id="minutes" min="0" max="59">'
+:'<label>कुल '+selected.unit+'</label><input type="number" id="quantity" min="0" step="any">';
+
+document.getElementById("quantityFields").innerHTML=q;
+
+["farmer","field","rate"].forEach(x=>document.getElementById(x).value="");
+["diesel","labour","other","paid"].forEach(x=>document.getElementById(x).value=0);
+document.getElementById("workDate").value=new Date().toISOString().slice(0,10);
+document.getElementById("result").classList.add("hidden");
+document.getElementById("calculator").scrollIntoView({behavior:"smooth"});
+}
+
+function calculate(){
+let farmer=document.getElementById("farmer").value.trim();
+let rate=Number(document.getElementById("rate").value);
+if(!farmer){alert("किसान का नाम भरें");return}
+if(rate<=0){alert("सही रेट डालें");return}
+
+let quantity=0,hours=0,minutes=0;
+if(selected.mode==="time"){
+hours=Number(document.getElementById("hours").value||0);
+minutes=Number(document.getElementById("minutes").value||0);
+if(minutes>59||minutes<0||hours<0||hours+minutes===0){
+alert("घंटे और मिनट सही भरें");return;
+}
+quantity=hours+minutes/60;
+}else{
+let q=document.getElementById("quantity").value;
+if(!q||Number(q)<=0){alert("काम की मात्रा भरें");return}
+quantity=Number(q);
+}
+
+let diesel=Number(document.getElementById("diesel").value||0);
+let labour=Number(document.getElementById("labour").value||0);
+let other=Number(document.getElementById("other").value||0);
+let paid=Number(document.getElementById("paid").value||0);
+
+if([diesel,labour,other,paid].some(x=>x<0)){
+alert("रकम ऋणात्मक नहीं हो सकती");return;
+}
+
+let gross=quantity*rate;
+let expense=diesel+labour+other;
+if(paid>gross){
+alert("जमा रकम कुल बिल से अधिक नहीं हो सकती");return;
+}
+
+last={
+id:editId||Date.now(),
+machine:selected.name,
+farmer,
+field:document.getElementById("field").value,
+rate,quantity,hours,minutes,
+unit:selected.unit,diesel,labour,other,
+expense,gross,paid,
+profit:gross-expense,
+date:document.getElementById("workDate").value
+};
+
+document.getElementById("gross").innerText=money(gross);
+document.getElementById("expense").innerText=money(expense);
+document.getElementById("profit").innerText=money(gross-expense);
+document.getElementById("paidShow").innerText=money(paid);
+document.getElementById("due").innerText=money(getDue(last));
+document.getElementById("result").classList.remove("hidden");
+}
+
+function saveRecord(){
+if(!last)return;
+if(editId){
+records=records.map(r=>r.id===editId?last:r);
+}else{
+records.unshift(last);
+}
+saveData();
+last=null;
+editId=null;
+document.getElementById("result").classList.add("hidden");
+showHistory();
+alert("हिसाब सेव हो गया!");
+}
+
+function showHistory(){
+dueOnly=false;
+renderHistory();
+}
+function showDue(){
+dueOnly=true;
+renderHistory();
+}
+function clearFilters(){
+document.getElementById("search").value="";
+document.getElementById("fromDate").value="";
+document.getElementById("toDate").value="";
+dueOnly=false;
+renderHistory();
+}
+
+function renderHistory(){
+let q=document.getElementById("search").value.toLowerCase();
+let from=document.getElementById("fromDate").value;
+let to=document.getElementById("toDate").value;
+
+let total=records.reduce((s,r)=>s+Number(r.gross??r.total??0),0);
+let expense=records.reduce((s,r)=>s+Number(r.expense||0),0);
+let profit=records.reduce((s,r)=>s+Number(r.profit??(r.total||0)),0);
+let pending=records.reduce((s,r)=>s+getDue(r),0);
+
+document.getElementById("count").innerText=records.length;
+document.getElementById("income").innerText=money(total);
+document.getElementById("expenses").innerText=money(expense);
+document.getElementById("saving").innerText=money(profit);
+document.getElementById("pending").innerText=money(pending);
+
+let filtered=records.filter(r=>{
+let match=(r.farmer||"").toLowerCase().includes(q)||
+(r.machine||"").toLowerCase().includes(q)||
+(r.field||"").toLowerCase().includes(q);
+return match&&(!from||r.date>=from)&&(!to||r.date<=to)&&
+(!dueOnly||getDue(r)>0);
+});
+
+let box=document.getElementById("history");
+box.innerHTML="";
+
+if(!filtered.length){
+box.innerHTML="<p>कोई हिसाब नहीं मिला।</p>";
+}else{
+filtered.forEach(r=>{
+let d=document.createElement("div");
+d.className="record";
+let lines=[
+r.machine,
+"किसान: "+r.farmer,
+"गांव: "+(r.field||"-"),
+"कुल बिल: "+money(r.gross??r.total),
+"जमा: "+money(r.paid),
+"बाकी: "+money(getDue(r)),
+"शुद्ध बचत: "+money(r.profit??r.total),
+"तारीख: "+(r.date||"-")
+];
+lines.forEach((v,i)=>{
+let p=document.createElement("div");
+p.textContent=v;
+if(i===0)p.style.fontWeight="bold";
+d.appendChild(p);
+});
+
+let edit=document.createElement("button");
+edit.className="blue";
+edit.textContent="संपादित करें";
+edit.onclick=()=>editRecord(r.id);
+
+let pay=document.createElement("button");
+pay.textContent="भुगतान जमा";
+pay.onclick=()=>addPayment(r.id);
+
+let print=document.createElement("button");
+print.className="gray";
+print.textContent="बिल प्रिंट";
+print.onclick=()=>printBill(r);
+
+let del=document.createElement("button");
+del.className="red";
+del.textContent="हटाएँ";
+del.onclick=()=>deleteRecord(r.id);
+
+d.append(edit,pay,print,del);
+box.appendChild(d);
+});
+}
+showReport();
+}
+
+function editRecord(id){
+let r=records.find(x=>x.id===id);
+if(!r)return;
+let i=tools.findIndex(t=>t.name===r.machine);
+if(i<0)return;
+openCalc(i);
+editId=id;
+document.getElementById("farmer").value=r.farmer||"";
+document.getElementById("field").value=r.field||"";
+document.getElementById("rate").value=r.rate;
+document.getElementById("diesel").value=r.diesel||0;
+document.getElementById("labour").value=r.labour||0;
+document.getElementById("other").value=r.other||0;
+document.getElementById("paid").value=r.paid||0;
+document.getElementById("workDate").value=r.date||"";
+if(selected.mode==="time"){
+document.getElementById("hours").value=r.hours||0;
+document.getElementById("minutes").value=r.minutes||0;
+}else{
+document.getElementById("quantity").value=r.quantity;
+}
+}
+
+function addPayment(id){
+let r=records.find(x=>x.id===id);
+if(!r)return;
+let due=getDue(r);
+if(due<=0){alert("इस बिल का पूरा भुगतान हो चुका है");return}
+let amount=prompt("कितना भुगतान जमा हुआ? बाकी रकम: "+money(due));
+if(amount===null)return;
+let n=Number(amount);
+if(!Number.isFinite(n)||n<=0||n>due){
+alert("सही भुगतान राशि डालें");return;
+}
+r.paid=Number(r.paid||0)+n;
+saveData();
+renderHistory();
+alert("भुगतान दर्ज हो गया");
+}
+
+function deleteRecord(id){
+if(!confirm("क्या यह हिसाब हटाना चाहते हैं?"))return;
+records=records.filter(r=>r.id!==id);
+saveData();
+renderHistory();
+}
+
+function showReport(){
+let box=document.getElementById("machineReport");
+box.innerHTML="";
+tools.forEach(t=>{
+let rows=records.filter(r=>r.machine===t.name);
+if(!rows.length)return;
+let amount=rows.reduce((s,r)=>s+Number(r.gross??r.total??0),0);
+let d=document.createElement("div");
+d.className="record";
+d.textContent=t.icon+" "+t.name+" | हिसाब: "+rows.length+" | कमाई: "+money(amount);
+box.appendChild(d);
+});
+if(!box.innerHTML)box.innerHTML="<p>अभी रिपोर्ट उपलब्ध नहीं है।</p>";
+}
+
+function printBill(r){
+let w=window.open("","_blank");
+if(!w){alert("पॉपअप की अनुमति दें");return}
+w.document.write(`
+<html><head><title>कृषि बिल</title>
+<style>body{font-family:Arial;padding:25px}h2{text-align:center;color:green}</style>
+</head><body>
+<h2>🌾 महिलांग कृषि फार्म</h2>
+<h3>कृषि यंत्र सेवा बिल</h3><hr>
+<p>किसान: ${safe(r.farmer)}</p>
+<p>गांव: ${safe(r.field||"-")}</p>
+<p>मशीन: ${safe(r.machine)}</p>
+<p>काम: ${r.quantity} ${safe(r.unit||"")}</p>
+<p>रेट: ${money(r.rate)}</p>
+<p>तारीख: ${r.date||"-"}</p><hr>
+<p>कुल बिल: ${money(r.gross??r.total)}</p>
+<p>डीजल खर्च: ${money(r.diesel)}</p>
+<p>मजदूरी: ${money(r.labour)}</p>
+<p>अन्य खर्च: ${money(r.other)}</p>
+<p>जमा: ${money(r.paid)}</p>
+<h3>बाकी रकम: ${money(getDue(r))}</h3>
+<p>शुद्ध बचत: ${money(r.profit??r.total)}</p>
+<hr><p>धन्यवाद!</p>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+w.document.close();
+}
+
+function safe(v){
+return String(v||"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+function backup(){
+let blob=new Blob([JSON.stringify(records,null,2)],{type:"application/json"});
+let url=URL.createObjectURL(blob);
+let a=document.createElement("a");
+a.href=url;
+a.download="Mahilang-Krishi-V3-Backup.json";
+a.click();
+URL.revokeObjectURL(url);
+}
+
+function restoreBackup(e){
+let file=e.target.files[0];
+if(!file)return;
+let reader=new FileReader();
+reader.onload=()=>{
+try{
+let data=JSON.parse(reader.result);
+if(!Array.isArray(data))throw Error();
+if(!confirm("बैकअप के हिसाब वर्तमान बही में जोड़ें?"))return;
+let ids=new Set(records.map(r=>r.id));
+data.forEach(r=>{if(!ids.has(r.id))records.push(r)});
+saveData();
+renderHistory();
+alert("बैकअप वापस आ गया!");
+}catch(err){alert("बैकअप फाइल सही नहीं है")}
+e.target.value="";
+};
+reader.readAsText(file);
+}
+
+setup();
+renderHistory();
+</script>
+</body>
+  </html>
+  
